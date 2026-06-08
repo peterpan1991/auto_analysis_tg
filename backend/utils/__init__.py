@@ -1,4 +1,4 @@
-from utils.logger import setup_logger, get_import_logger, get_analysis_logger, get_default_logger
+from utils.logger import setup_logger, get_import_logger, get_analysis_logger, get_default_logger, get_vectorize_logger
 from utils.parse_tg import (
     parse_json_format,
     parse_telegram_export_format,
@@ -14,6 +14,7 @@ __all__ = [
     "get_import_logger",
     "get_analysis_logger",
     "get_default_logger",
+    "get_vectorize_logger",
     "parse_json_format",
     "parse_telegram_export_format",
     "parse_telegram_content",

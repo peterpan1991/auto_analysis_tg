@@ -3,8 +3,8 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { Card, Button, Table, Tag, Space, Breadcrumb, message, Tabs, Spin, Empty, Progress, Row, Col, Divider, Modal } from 'antd'
 import ReactMarkdown from 'react-markdown'
 import { ArrowLeftOutlined, PlayCircleOutlined, ReloadOutlined, SafetyOutlined, RobotOutlined, StopOutlined } from '@ant-design/icons'
-import type { Task, ExtractedInfo, AnalysisResult } from '../types'
-import { taskApi, extractApi, analysisApi } from '../api'
+import type { Task, ChatMessage, ExtractedInfo, AnalysisResult } from '../types'
+import { taskApi, extractApi, analysisApi, chatApi } from '../api'
 
 const infoTypeLabels: Record<ExtractedInfo['info_type'], string> = {
   phone: '手机号码',
@@ -62,12 +62,13 @@ function AnalysisResult() {
   const { taskId } = useParams<{ taskId: string }>()
   const navigate = useNavigate()
   const [task, setTask] = useState<Task | null>(null)
+  const [messages, setMessages] = useState<ChatMessage[]>([])
   const [extractedInfo, setExtractedInfo] = useState<ExtractedInfo[]>([])
   const [analysisResults, setAnalysisResults] = useState<AnalysisResult[]>([])
   const [loading, setLoading] = useState(false)
   const [extracting, setExtracting] = useState(false)
   const [analyzing, setAnalyzing] = useState(false)
-  const [activeTab, setActiveTab] = useState('extracted')
+  const [activeTab, setActiveTab] = useState('messages')
   const [selectedInfoType, setSelectedInfoType] = useState<string | null>(null)
   const [extractedPage, setExtractedPage] = useState(1)
   const [modalVisible, setModalVisible] = useState(false)
@@ -130,6 +131,7 @@ function AnalysisResult() {
   useEffect(() => {
     if (taskId) {
       fetchTask()
+      fetchMessages()
       fetchExtractedInfo()
       fetchAnalysisResults()
     }
@@ -155,6 +157,15 @@ function AnalysisResult() {
       setExtractedInfo(data)
     } catch (error) {
       console.error('获取提取信息失败')
+    }
+  }
+
+  const fetchMessages = async () => {
+    try {
+      const { data } = await chatApi.getMessages(Number(taskId))
+      setMessages(data)
+    } catch (error) {
+      console.error('获取消息失败')
     }
   }
 
@@ -232,6 +243,41 @@ function AnalysisResult() {
     {
       title: '上下文',
       dataIndex: 'context',
+      ellipsis: true,
+    },
+  ]
+
+  const messageColumns = [
+    {
+      title: '时间',
+      dataIndex: 'timestamp',
+      width: 180,
+    },
+    {
+      title: '发送者',
+      dataIndex: 'sender',
+      width: 120,
+      ellipsis: true,
+    },
+    {
+      title: '类型',
+      dataIndex: 'message_type',
+      width: 80,
+      render: (type: ChatMessage['message_type']) => {
+        const typeMap: Record<ChatMessage['message_type'], string> = {
+          text: '文本',
+          image: '图片',
+          file: '文件',
+          video: '视频',
+          audio: '语音',
+          other: '其他',
+        }
+        return typeMap[type] || type
+      },
+    },
+    {
+      title: '内容',
+      dataIndex: 'content',
       ellipsis: true,
     },
   ]
@@ -357,62 +403,76 @@ function AnalysisResult() {
 
         <Divider />
 
-        {extractedInfo.length > 0 && (
-          <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
-            <Col span={4}>
-              <Card 
-                size="small" 
-                hoverable
-                onClick={() => handleInfoTypeChange(null)}
-                style={{ 
-                  textAlign: 'center',
-                  borderColor: selectedInfoType === null ? '#1890ff' : undefined,
-                  background: selectedInfoType === null ? '#e6f7ff' : undefined,
-                }}
-              >
-                <div style={{ textAlign: 'center' }}>
-                  <div style={{ fontSize: 18, fontWeight: 'bold' }}>{extractedInfo.length}</div>
-                  <div style={{ fontSize: 12 }}>全部</div>
-                </div>
-              </Card>
-            </Col>
-            {Object.entries(infoTypeLabels).map(([type, label]) => (
-              <Col key={type} span={4}>
-                <Card 
-                  size="small" 
-                  hoverable
-                  onClick={() => handleInfoTypeChange(type)}
-                  style={{ 
-                    textAlign: 'center',
-                    borderColor: selectedInfoType === type ? '#1890ff' : undefined,
-                    background: selectedInfoType === type ? '#e6f7ff' : undefined,
-                  }}
-                >
-                  <div style={{ textAlign: 'center' }}>
-                    <div style={{ fontSize: 18, fontWeight: 'bold' }}>{infoTypeCounts[type] || 0}</div>
-                    <div style={{ fontSize: 12 }}>{label}</div>
-                  </div>
-                </Card>
-              </Col>
-            ))}
-          </Row>
-        )}
-
         <Tabs
           activeKey={activeTab}
           onChange={setActiveTab}
           items={[
             {
+              key: 'messages',
+              label: `全部消息 (${messages.length})`,
+              children: messages.length > 0 ? (
+                <Table
+                  columns={messageColumns}
+                  dataSource={messages}
+                  rowKey="id"
+                  pagination={{ pageSize: 20 }}
+                  size="small"
+                />
+              ) : (
+                <Empty description="暂无消息数据" />
+              ),
+            },
+            {
               key: 'extracted',
               label: `敏感信息 (${extractedInfo.length})`,
               children: extractedInfo.length > 0 ? (
-                <Table
-                  columns={extractedColumns}
-                  dataSource={filteredExtractedInfo}
-                  rowKey="id"
-                  pagination={{ pageSize: 20, current: extractedPage, onChange: setExtractedPage }}
-                  size="small"
-                />
+                <>
+                  <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
+                    <Col span={4}>
+                      <Card 
+                        size="small" 
+                        hoverable
+                        onClick={() => handleInfoTypeChange(null)}
+                        style={{ 
+                          textAlign: 'center',
+                          borderColor: selectedInfoType === null ? '#1890ff' : undefined,
+                          background: selectedInfoType === null ? '#e6f7ff' : undefined,
+                        }}
+                      >
+                        <div style={{ textAlign: 'center' }}>
+                          <div style={{ fontSize: 18, fontWeight: 'bold' }}>{extractedInfo.length}</div>
+                          <div style={{ fontSize: 12 }}>全部</div>
+                        </div>
+                      </Card>
+                    </Col>
+                    {Object.entries(infoTypeLabels).map(([type, label]) => (
+                      <Col key={type} span={4}>
+                        <Card 
+                          size="small" 
+                          hoverable
+                          onClick={() => handleInfoTypeChange(type)}
+                          style={{ 
+                            textAlign: 'center',
+                            borderColor: selectedInfoType === type ? '#1890ff' : undefined,
+                            background: selectedInfoType === type ? '#e6f7ff' : undefined,
+                          }}
+                        >
+                          <div style={{ textAlign: 'center' }}>
+                            <div style={{ fontSize: 18, fontWeight: 'bold' }}>{infoTypeCounts[type] || 0}</div>
+                            <div style={{ fontSize: 12 }}>{label}</div>
+                          </div>
+                        </Card>
+                      </Col>
+                    ))}
+                  </Row>
+                  <Table
+                    columns={extractedColumns}
+                    dataSource={filteredExtractedInfo}
+                    rowKey="id"
+                    pagination={{ pageSize: 20, current: extractedPage, onChange: setExtractedPage }}
+                    size="small"
+                  />
+                </>
               ) : (
                 <Empty description="请点击「提取敏感信息」按钮开始提取" />
               ),

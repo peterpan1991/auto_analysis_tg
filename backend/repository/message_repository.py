@@ -12,6 +12,25 @@ def get_messages_by_task(db: Session, task_id: int) -> List[Message]:
 def get_messages_by_contact(db: Session, contact_id: int) -> List[Message]:
     return db.query(Message).filter(Message.contact_id == contact_id).order_by(Message.timestamp.asc()).all()
 
+def get_limit_messages(db: Session, task_id: int, offset: int, batch_size: int) -> List[Message]:
+    return db.query(Message).filter(Message.task_id == task_id).order_by(Message.timestamp.asc()).offset(offset).limit(batch_size).all()
+
+def get_message_count(db: Session, task_id: int) -> int:
+    return db.query(Message).filter(Message.task_id == task_id).count()
+
+def get_contact_ids_by_task(db: Session, task_id: int) -> List[int]:
+    results = db.query(Message.contact_id).filter(
+        Message.task_id == task_id,
+        Message.contact_id.isnot(None)
+    ).distinct().all()
+    return [r[0] for r in results]
+
+def get_messages_by_contact_ordered(db: Session, task_id: int, contact_id: int) -> List[Message]:
+    return db.query(Message).filter(
+        Message.task_id == task_id,
+        Message.contact_id == contact_id
+    ).order_by(Message.timestamp.asc()).all()
+
 def create_message(db: Session, message: Message) -> Message:
     db.add(message)
     db.commit()

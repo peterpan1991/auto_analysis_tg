@@ -7,6 +7,14 @@ import json
 import re
 import logging
 
+from chains.prompts import (
+    SUB_REDUCE_PROMPTS,
+    GLOBAL_REDUCE_PROMPTS,
+    REDUCE_PROMPTS,
+    SYSTEM_PROMPTS,
+)
+from core.constants import MAX_ITEMS_PER_SUB_REDUCE, MAX_CHARS_PER_ITEM
+
 logger = logging.getLogger(__name__)
 
 
@@ -65,9 +73,9 @@ class LangChainAnalyzer:
         completed_count = 0
 
         if log_callback:
-            log_callback(f"开始处理 {total} 个分块，并发数={min(self.max_workers, 2)}")
+            log_callback(f"开始处理 {total} 个分块，并发数={self.max_workers}")
 
-        with ThreadPoolExecutor(max_workers=min(self.max_workers, 2)) as executor:
+        with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
             future_to_idx = {
                 executor.submit(self._safe_invoke, chain, inp): idx
                 for idx, inp in enumerate(inputs)
@@ -214,36 +222,15 @@ class LangChainAnalyzer:
             HumanMessagePromptTemplate.from_template("{text}")
         ])
         chain = prompt_template | self.reduce_llm
-        result = chain.invoke({"text": prompt_text})
-
-        return result.content
+        return self._safe_invoke(chain, {"text": prompt_text}, timeout=180)
 
     def parallel_reduce(
         self,
         map_results_by_type: Dict[str, List[str]],
         system_prompts: Dict[str, str],
-        reduce_prompts: Dict[str, str]
+        reduce_prompts: Dict[str, str],
+        log_callback: Optional[Callable[[str], None]] = None
     ) -> Dict[str, str]:
-
-        def _reduce_single(rt: str, map_results: List[str]) -> tuple:
-            filtered_results = [r for r in map_results if r and r.strip()]
-            if not filtered_results:
-                return (rt, "")
-            all_summary = "\n\n".join([f"分段{i+1}: {r}" for i, r in enumerate(filtered_results)])
-            prompt_text = reduce_prompts[rt].format(summary=all_summary)
-
-            prompt_template = ChatPromptTemplate.from_messages([
-                SystemMessage(content=system_prompts[rt]),
-                HumanMessagePromptTemplate.from_template("{text}")
-            ])
-            chain = prompt_template | self.reduce_llm
-            try:
-                result = chain.invoke({"text": prompt_text})
-                return (rt, result.content)
-            except Exception as e:
-                logger.error(f"Reduce for {rt} failed: {e}")
-                return (rt, "")
-
         valid_types = {rt: mr for rt, mr in map_results_by_type.items() if any(r and r.strip() for r in mr)}
         if not valid_types:
             return {}
@@ -251,19 +238,89 @@ class LangChainAnalyzer:
         results = {}
         total = len(valid_types)
         completed = 0
+
         for rt, mr in valid_types.items():
             try:
-                logger.info(f"Reduce 进度: 开始处理 {rt} ({completed+1}/{total})")
-                rt_key, content = _reduce_single(rt, mr)
+                msg = f"Reduce 进度: 开始处理 {rt} ({completed+1}/{total})"
+                if log_callback:
+                    log_callback(msg)
+                rt_key, content = self._tiered_reduce(rt, mr, system_prompts, reduce_prompts, log_callback)
                 results[rt_key] = content
                 completed += 1
-                logger.info(f"Reduce 进度: {completed}/{total} 完成 ({rt})")
+                msg = f"Reduce 进度: {completed}/{total} 完成 ({rt})"
+                if log_callback:
+                    log_callback(msg)
             except Exception as e:
                 logger.error(f"Reduce for {rt} failed: {e}")
                 results[rt] = ""
                 completed += 1
 
         return results
+
+    def _tiered_reduce(
+        self,
+        result_type: str,
+        items: List[str],
+        system_prompts: Dict[str, str],
+        reduce_prompts: Dict[str, str],
+        log_callback: Optional[Callable[[str], None]] = None
+    ) -> tuple:
+        filtered = [r.strip() for r in items if r and r.strip()]
+        if not filtered:
+            return (result_type, "")
+
+        if len(filtered) <= MAX_ITEMS_PER_SUB_REDUCE:
+            msg = f"  [{result_type}] 共 {len(filtered)} 条，直接合并"
+            if log_callback:
+                log_callback(msg)
+            return self._single_reduce(result_type, filtered, system_prompts[result_type], reduce_prompts[result_type])
+
+        groups = self._split_groups(filtered, MAX_ITEMS_PER_SUB_REDUCE)
+        msg = f"  [{result_type}] 共 {len(filtered)} 条，分 {len(groups)} 组进行小合并"
+        if log_callback:
+            log_callback(msg)
+
+        sub_results = []
+        for i, group in enumerate(groups):
+            sub_text = self._single_reduce(
+                result_type,
+                group,
+                system_prompts[result_type],
+                SUB_REDUCE_PROMPTS[result_type]
+            )
+            sub_content = sub_text[1] if isinstance(sub_text, tuple) else sub_text
+            if sub_content and sub_content.strip():
+                sub_results.append(sub_content.strip())
+            msg = f"  [{result_type}] 第 {i+1}/{len(groups)} 组小合并完成"
+            if log_callback:
+                log_callback(msg)
+
+        if len(sub_results) == 1:
+            return (result_type, sub_results[0])
+
+        msg = f"  [{result_type}] 开始全局合并 {len(sub_results)} 个子结果"
+        if log_callback:
+            log_callback(msg)
+        return self._single_reduce(result_type, sub_results, system_prompts[result_type], GLOBAL_REDUCE_PROMPTS[result_type])
+
+    def _split_groups(self, items: List[str], max_size: int) -> List[List[str]]:
+        groups = []
+        for i in range(0, len(items), max_size):
+            groups.append(items[i:i + max_size])
+        return groups
+
+    def _single_reduce(self, result_type: str, items: List[str], system_prompt: str, reduce_prompt_template: str) -> tuple:
+        truncated = [item[:MAX_CHARS_PER_ITEM] for item in items]
+        summary = "\n\n".join([f"分段{i+1}: {r}" for i, r in enumerate(truncated)])
+        prompt_text = reduce_prompt_template.format(summary=summary)
+
+        prompt_template = ChatPromptTemplate.from_messages([
+            SystemMessage(content=system_prompt),
+            HumanMessagePromptTemplate.from_template("{text}")
+        ])
+        chain = prompt_template | self.reduce_llm
+        content = self._safe_invoke(chain, {"text": prompt_text}, timeout=180)
+        return (result_type, content)
 
 
 def create_analyzer(model: str = "qwen2.5:7b", max_workers: int = 2, timeout: int = 0) -> LangChainAnalyzer:

@@ -1,0 +1,1 @@
+{"root":["./src/app.tsx","./src/main.tsx","./src/vite-env.d.ts","./src/api/index.ts","./src/pages/aichat.tsx","./src/pages/analysisresult.tsx","./src/pages/chatimport.tsx","./src/pages/tasklist.tsx","./src/types/index.ts"],"errors":true,"version":"5.6.3"}

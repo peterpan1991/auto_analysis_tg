@@ -110,3 +110,22 @@ CREATE INDEX `idx_extracted_info_task_id` ON `extracted_info`(`task_id`);
 CREATE INDEX `idx_extracted_info_type` ON `extracted_info`(`info_type`);
 CREATE INDEX `idx_extracted_info_message_id` ON `extracted_info`(`message_id`);
 CREATE INDEX `idx_extracted_info_contact_id` ON `extracted_info`(`contact_id`);
+
+-- ============================================================
+-- 消息向量化表 (message_embedding)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS `message_embedding` (
+    `id` INT NOT NULL PRIMARY KEY AUTO_INCREMENT,
+    `task_id` INT,
+    `message_id` INT NOT NULL,
+    `contact_id` INT,
+    `content_hash` VARCHAR(64),
+    `content` TEXT NOT NULL,
+    `embedding` TEXT NOT NULL,
+    `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE INDEX `idx_embedding_task_id` ON `message_embedding`(`task_id`);
+CREATE INDEX `idx_embedding_message_id` ON `message_embedding`(`message_id`);
+CREATE INDEX `idx_embedding_contact_id` ON `message_embedding`(`contact_id`);
+CREATE INDEX `idx_embedding_content_hash` ON `message_embedding`(`content_hash`);

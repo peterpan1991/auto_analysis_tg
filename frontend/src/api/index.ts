@@ -34,4 +34,39 @@ export const analysisApi = {
   getAnalyzeLogs: (taskId: number) => api.get<{ logs: string[] }>(`/tasks/${taskId}/analyze-logs`),
 }
 
+export interface VectorizeStatus {
+  task_id: number
+  message_count: number
+  messages_processed: number
+  is_vectorized: boolean
+  progress: number
+}
+
+export interface VectorizeDetailStatus {
+  status: string
+  progress: number
+  logs: string[]
+  error: string | null
+  embedding_count: number
+}
+
+export interface ChatAIRequest {
+  task_id: number
+  prompt: string
+  top_k?: number
+}
+
+export interface ChatAIResponse {
+  response: string
+  context_messages: number
+}
+
+export const vectorizeApi = {
+  getStatus: (taskId: number) => api.get<VectorizeStatus>(`/tasks/${taskId}/vectorize-status`),
+  getDetailStatus: (taskId: number) => api.get<VectorizeDetailStatus>(`/tasks/${taskId}/vectorize-status-detail`),
+  startVectorize: (taskId: number) => api.post(`/tasks/${taskId}/vectorize`),
+  cancelVectorize: (taskId: number) => api.post(`/tasks/${taskId}/vectorize/cancel`),
+  chatAI: (data: ChatAIRequest) => api.post<ChatAIResponse>('/chat/ai', data),
+}
+
 export default api

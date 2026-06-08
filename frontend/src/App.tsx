@@ -4,6 +4,7 @@ import zhCN from 'antd/locale/zh_CN'
 import TaskList from './pages/TaskList'
 import ChatImport from './pages/ChatImport'
 import AnalysisResult from './pages/AnalysisResult'
+import AIChat from './pages/AIChat'
 import './App.css'
 
 function App() {
@@ -15,6 +16,7 @@ function App() {
           <Route path="/tasks" element={<TaskList />} />
           <Route path="/import/:taskId" element={<ChatImport />} />
           <Route path="/analysis/:taskId" element={<AnalysisResult />} />
+          <Route path="/ai-chat/:taskId" element={<AIChat />} />
         </Routes>
       </BrowserRouter>
     </ConfigProvider>

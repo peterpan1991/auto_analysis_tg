@@ -203,6 +203,15 @@ AnalysisResult (分析结果)
 └── result_type: person_info/org_structure/fund_flow/...
 ```
 
+### AI模型
+```
+# 语义模型
+ollama pull qwen2.5:7b
+
+# 向量模型
+ollama pull shaw/dmeta-embedding-zh
+```
+
 ## 任务状态流转
 
 ```
@@ -220,4 +229,4 @@ pending → imported → extracted → analyzing → completed
 | `DEFAULT_MODEL` | qwen2.5:7b | Ollama 模型名称 |
 | `CHUNK_SIZE` | 200 | Map 阶段每个分块的消息数 |
 | `MAX_WORKERS` | 2 | 最大并发数 |
-| `MAX_CONTENT_LENGTH` | 500 | 单条消息最大字符数 |
+| `MAX_CONTENT_LENGTH` | 200 | 单条消息最大字符数 |

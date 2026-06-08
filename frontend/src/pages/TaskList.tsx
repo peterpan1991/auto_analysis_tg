@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Table, Button, Modal, Form, Input, message, Popconfirm, Tag, Card } from 'antd'
-import { PlusOutlined, DeleteOutlined, EditOutlined, UploadOutlined, BarChartOutlined } from '@ant-design/icons'
+import { PlusOutlined, DeleteOutlined, UploadOutlined, BarChartOutlined, RobotOutlined } from '@ant-design/icons'
 import type { Task } from '../types'
 import { taskApi } from '../api'
 
@@ -133,6 +133,14 @@ function TaskList() {
             disabled={!['imported', 'extracted', 'completed'].includes(record.status)}
           >
             分析
+          </Button>
+          <Button
+            type="link"
+            icon={<RobotOutlined />}
+            onClick={() => navigate(`/ai-chat/${record.id}`)}
+            disabled={!['imported', 'extracted', 'completed'].includes(record.status)}
+          >
+            AI对话
           </Button>
           <Popconfirm
             title="确定删除此任务？"

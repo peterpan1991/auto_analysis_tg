@@ -16,7 +16,7 @@ from chains.prompts import (
     CHUNK_SIZE,
     IGNORE_WORDS,
 )
-from core.constants import MAX_CONTENT_LENGTH
+from core.constants import MAX_CONTENT_LENGTH, MAX_WORKERS  
 from chains.langchain_analysis import create_analyzer
 
 try:
@@ -29,33 +29,6 @@ logger = get_analysis_logger()
 analysis_lock = threading.RLock()
 cancel_flags: Dict[int, bool] = {}
 analysis_tasks: Dict[int, dict] = {}
-
-def call_ollama(prompt: str, system_prompt: Optional[str] = None) -> str:
-    from chains.prompts import DEFAULT_MODEL
-
-    if ollama is None:
-        raise Exception("ollama 库未安装，请运行: pip install ollama")
-
-    try:
-        messages = []
-        if system_prompt:
-            messages.append({"role": "system", "content": system_prompt})
-        messages.append({"role": "user", "content": prompt})
-
-        response = ollama.chat(
-            model=DEFAULT_MODEL,
-            messages=messages,
-            options={
-                "temperature": 0,
-                "timeout": 60,
-                "num_ctx": 8192,
-                "num_predict": 100,
-                "low_vram": False
-            }
-        )
-        return response["message"]["content"]
-    except Exception as e:
-        raise Exception(f"调用 Ollama 失败: {str(e)}")
 
 def split_messages(messages: List, chunk_size: int = CHUNK_SIZE) -> List[List]:
     chunks = []
@@ -105,8 +78,8 @@ def cancel_analysis(task_id: int) -> bool:
 
 def analyze_async(task_id: int):
     from core.database import get_db
-
     db = next(get_db())
+    
     try:
         log_analysis(task_id, f"开始分析任务 {task_id}")
 
@@ -145,8 +118,8 @@ def analyze_async(task_id: int):
             log_analysis(task_id, msg)
             print(f"[Task {task_id}] {msg}")
 
-        log_analysis(task_id, f"  开始合并 Map 阶段 (5维度联合提取, max_workers=2)...")
-        analyzer = create_analyzer(max_workers=2)
+        log_analysis(task_id, f"  开始合并 Map 阶段 (5维度联合提取, max_workers={MAX_WORKERS})...")
+        analyzer = create_analyzer(max_workers=MAX_WORKERS)
         map_results_by_type = analyzer.parallel_combined_map(
             message_chunks,
             COMBINED_SYSTEM_PROMPT,
@@ -172,7 +145,8 @@ def analyze_async(task_id: int):
         reduce_results = analyzer.parallel_reduce(
             map_results_by_type,
             SYSTEM_PROMPTS,
-            REDUCE_PROMPTS
+            REDUCE_PROMPTS,
+            log_callback=lambda msg: log_analysis(task_id, msg)
         )
         log_analysis(task_id, f"  Reduce 阶段完成")
         print(f"[Task {task_id}] Reduce 阶段完成")

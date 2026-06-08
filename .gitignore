@@ -30,6 +30,8 @@ cache/
 frontend/node_modules/
 frontend/dist/
 
+backend/vector_db/
+backend/chains/models/
 
 
 # PyInstaller

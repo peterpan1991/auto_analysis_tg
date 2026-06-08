@@ -23,6 +23,10 @@ from repository.message_repository import (
     create_messages_bulk,
     count_messages_by_task,
     delete_message,
+    get_limit_messages,
+    get_message_count,
+    get_contact_ids_by_task,
+    get_messages_by_contact_ordered,
 )
 
 from repository.task_repository import (

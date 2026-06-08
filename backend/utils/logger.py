@@ -34,5 +34,9 @@ def get_analysis_logger() -> logging.Logger:
     log_file = os.path.join(LOG_DIR, "analysis.log")
     return setup_logger("analysis", log_file)
 
+def get_vectorize_logger() -> logging.Logger:
+    log_file = os.path.join(LOG_DIR, "vectorize.log")
+    return setup_logger("vectorize", log_file)
+
 def get_default_logger() -> logging.Logger:
     return setup_logger(__name__)
