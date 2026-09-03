@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { Input, Button, Card, Spin, Typography, Avatar, Space, Progress, Alert, List } from 'antd'
+import { Input, Button, Card, Spin, Typography, Avatar, Space, Progress, Alert, List, Select } from 'antd'
 import { SendOutlined, ArrowLeftOutlined, RobotOutlined, UserOutlined, DatabaseOutlined } from '@ant-design/icons'
-import { vectorizeApi } from '../api'
-import type { VectorizeStatus, VectorizeDetailStatus } from '../api'
+import { chatApi, vectorizeApi } from '../api'
+import type { VectorizeStatus, VectorizeDetailStatus, ChatSource } from '../api'
+import type { TaskContact } from '../types'
 
 const { Text, Title } = Typography
 
@@ -12,6 +13,7 @@ interface Message {
   role: 'user' | 'assistant'
   content: string
   timestamp: Date
+  sources?: ChatSource[]
 }
 
 function AIChat() {
@@ -19,6 +21,8 @@ function AIChat() {
   const navigate = useNavigate()
   const [messages, setMessages] = useState<Message[]>([])
   const [inputValue, setInputValue] = useState('')
+  const [contacts, setContacts] = useState<TaskContact[]>([])
+  const [selectedContactId, setSelectedContactId] = useState<number | undefined>()
   const [loading, setLoading] = useState(false)
   const [vectorizeStatus, setVectorizeStatus] = useState<VectorizeStatus | null>(null)
   const [vectorizeDetail, setVectorizeDetail] = useState<VectorizeDetailStatus | null>(null)
@@ -30,12 +34,24 @@ function AIChat() {
 
   useEffect(() => {
     checkVectorizeStatus()
+    fetchContacts()
     return () => {
       if (pollTimerRef.current) {
         clearInterval(pollTimerRef.current)
       }
     }
   }, [taskId])
+
+  const fetchContacts = async () => {
+    if (!taskId) return
+
+    try {
+      const { data } = await chatApi.getContacts(Number(taskId))
+      setContacts(data)
+    } catch (error) {
+      console.error('Failed to get contacts:', error)
+    }
+  }
 
   useEffect(() => {
     scrollToBottom()
@@ -127,6 +143,7 @@ function AIChat() {
       const { data } = await vectorizeApi.chatAI({
         task_id: Number(taskId),
         prompt: userMessage.content,
+        contact_id: selectedContactId,
       })
 
       const assistantMessage: Message = {
@@ -134,6 +151,7 @@ function AIChat() {
         role: 'assistant',
         content: data.response,
         timestamp: new Date(),
+        sources: data.sources,
       }
 
       setMessages(prev => [...prev, assistantMessage])
@@ -294,7 +312,7 @@ function AIChat() {
                     flexShrink: 0,
                   }}
                 />
-                <div>
+                <div style={{ minWidth: 0, width: msg.role === 'assistant' ? '100%' : 'auto' }}>
                   <div style={{
                     background: msg.role === 'user' ? '#1890ff' : '#fff',
                     color: msg.role === 'user' ? '#fff' : '#333',
@@ -306,6 +324,44 @@ function AIChat() {
                   }}>
                     {msg.content}
                   </div>
+                  {msg.role === 'assistant' && msg.sources && msg.sources.length > 0 && (
+                    <details style={{ marginTop: 8 }}>
+                      <summary style={{ cursor: 'pointer', color: '#1677ff', fontSize: 13 }}>
+                        查看来源（{msg.sources.length}）
+                      </summary>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8 }}>
+                        {msg.sources.map(source => (
+                          <div
+                            key={`${msg.id}-${source.source_id}`}
+                            style={{
+                              padding: 12,
+                              border: '1px solid #e8e8e8',
+                              borderRadius: 8,
+                              background: '#fafafa',
+                            }}
+                          >
+                            <Text strong>来源{source.source_id}</Text>
+                            <Text type="secondary" style={{ display: 'block', marginTop: 2, fontSize: 12 }}>
+                              会话 #{source.contact_id} · 消息 {source.start_message_id}-{source.end_message_id} · 相似度 {source.similarity.toFixed(4)}
+                            </Text>
+                            <div
+                              style={{
+                                marginTop: 8,
+                                whiteSpace: 'pre-wrap',
+                                wordBreak: 'break-word',
+                                maxHeight: 240,
+                                overflow: 'auto',
+                                fontSize: 13,
+                                lineHeight: 1.6,
+                              }}
+                            >
+                              {source.content}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </details>
+                  )}
                   <Text style={{
                     display: 'block',
                     marginTop: 4,
@@ -340,6 +396,21 @@ function AIChat() {
 
       <Card style={{ borderRadius: 0, flexShrink: 0 }} bodyStyle={{ padding: '16px 24px' }}>
         <div style={{ maxWidth: 800, margin: '0 auto' }}>
+          <Select
+            allowClear
+            value={selectedContactId}
+            placeholder="全部会话"
+            options={contacts.map(contact => ({
+              value: contact.id,
+              label: `${contact.name}${contact.is_group ? '（群聊）' : ''}`,
+            }))}
+            onChange={value => {
+              setSelectedContactId(value)
+              setMessages([])
+            }}
+            disabled={loading}
+            style={{ width: '100%', marginBottom: 12 }}
+          />
           <Input.TextArea
             ref={inputRef}
             value={inputValue}

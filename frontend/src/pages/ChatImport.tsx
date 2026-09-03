@@ -1,8 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { Card, Button, Upload, Table, message, Spin, Alert, Space, Breadcrumb, Typography, Input, Radio } from 'antd'
+import { Card, Button, Upload, Table, message, Alert, Space, Breadcrumb, Typography, Input, Radio } from 'antd'
 import { InboxOutlined, ImportOutlined, FolderOutlined, FileOutlined } from '@ant-design/icons'
-import type { UploadFile } from 'antd/es/upload/interface'
 import type { Task, ChatMessage } from '../types'
 import { taskApi, chatApi } from '../api'
 
@@ -14,7 +13,6 @@ function ChatImport() {
   const navigate = useNavigate()
   const [task, setTask] = useState<Task | null>(null)
   const [messages, setMessages] = useState<ChatMessage[]>([])
-  const [loading, setLoading] = useState(false)
   const [importing, setImporting] = useState(false)
   const [fileContent, setFileContent] = useState<string>('')
   const [fileName, setFileName] = useState<string>('')

@@ -1,9 +1,7 @@
-import os
 from typing import List, Dict, Optional
 import chromadb
 
-EMBEDDING_TOP_K = 30
-VECTOR_DB_PATH = "./vector_db"
+from core.constants import RAG_CANDIDATE_TOP_K, VECTOR_DB_PATH
 
 class ChromaDBClient:
     _instance = None
@@ -38,21 +36,41 @@ class ChromaDBClient:
         self,
         task_id: int,
         query_embedding: List[float],
-        n_results: int = EMBEDDING_TOP_K
+        n_results: int = RAG_CANDIDATE_TOP_K,
+        contact_id: int = None,
+        document_contains_any: Optional[List[str]] = None,
     ) -> Dict:
         collection = self.get_collection(task_id)
+
+        where_filter = None
+
+        if contact_id is not None:
+            where_filter = {"contact_id": contact_id}
+
+        where_document_filter = None
+
+        if document_contains_any:
+            contains_filters = [
+                {"$contains": value}
+                for value in document_contains_any
+            ]
+
+            if len(contains_filters) == 1:
+                where_document_filter = contains_filters[0]
+            else:
+                where_document_filter = {"$or": contains_filters}
+
         results = collection.query(
             query_embeddings=[query_embedding],
-            n_results=n_results
+            n_results=n_results,
+            where=where_filter,
+            where_document=where_document_filter
         )
         return results
 
     def count(self, task_id: int) -> int:
-        try:
-            collection = self.get_collection(task_id)
-            return collection.count()
-        except:
-            return 0
+        collection = self.get_collection(task_id)
+        return collection.count()
 
     def delete_collection(self, task_id: int):
         try:

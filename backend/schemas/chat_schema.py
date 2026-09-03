@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import Optional, List
 
 class ImportRequest(BaseModel):
@@ -23,9 +23,24 @@ class VectorizeRequest(BaseModel):
 
 class ChatRequest(BaseModel):
     task_id: int
-    prompt: str
+    prompt: str = Field(min_length=1, max_length=500)
+    contact_id: Optional[int] = None
+
+class ChatSource(BaseModel):
+    source_id: int
+    chunk_id: str
+    contact_id: int
+    start_message_id: int
+    end_message_id: int
+    similarity: float
+    content: str
 
 class ChatResponse(BaseModel):
     response: str
-    context_messages: int
+    context_count: int
     expanded_queries: List[str]
+    sources: List[ChatSource] = Field(default_factory=list)
+
+
+class ErrorResponse(BaseModel):
+    detail: str

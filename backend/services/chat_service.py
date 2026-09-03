@@ -450,3 +450,6 @@ def process_messages_json(db: Session, file_path: str, task_id: int, user_id: in
         repository.create_messages_bulk(db, msg_objects)
 
     return {"contact_id": contact_id, "message_count": msg_count}
+
+def get_contacts_by_task(db: Session, task_id: int):
+    return repository.get_contacts_by_task(db, task_id)

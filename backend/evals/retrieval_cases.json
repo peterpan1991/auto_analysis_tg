@@ -1,0 +1,68 @@
+[
+  {
+    "name": "重复付款退款金额",
+    "query": "客户 TEST-C208 重复付款的退款金额是多少？",
+    "expected_keywords": [
+      "TEST-C208",
+      "一千二百八十元"
+    ],
+    "expect_empty": false
+  },
+  {
+    "name": "TEST-C215 最终退款",
+    "query": "客户 TEST-C215 最终退款多少钱？",
+    "expected_keywords": [
+      "TEST-C215",
+      "一百九十九元"
+    ],
+    "expect_empty": false
+  },
+  {
+    "name": "显示器最终换货",
+    "query": "显示器售后最后是退款还是换货？",
+    "expected_keywords": [
+      "显示器",
+      "售后",
+      "换货"
+    ],
+    "expect_empty": false
+  },
+  {
+    "name": "红色键盘延期原因",
+    "query": "红色键盘为什么延期发货？",
+    "expected_keywords": [
+      "红色键盘",
+      "只有四件",
+      "需要八件"
+    ],
+    "expect_empty": false
+  },
+  {
+    "name": "宝可梦价格",
+    "query": "宝可梦价格",
+    "expected_keywords": [      
+    ],
+    "expect_empty": true
+  },
+  {
+    "name": "不存在的客户退款",
+    "query": "客户 TEST-C999 最终退款多少钱？",
+    "expected_keywords": [],
+    "expect_empty": true
+  },
+  {
+    "name": "比较两位客户退款",
+    "query": "客户 TEST-C208 和 TEST-C215 的退款金额分别是多少？",
+    "expected_keyword_groups": [
+      [
+        "TEST-C208",
+        "一千二百八十元"
+      ],
+      [
+        "TEST-C215",
+        "一百九十九元"
+      ]
+    ],
+    "expect_empty": false
+  }
+]

@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { Card, Button, Table, Tag, Space, Breadcrumb, message, Tabs, Spin, Empty, Progress, Row, Col, Divider, Modal } from 'antd'
+import { Card, Button, Table, Tag, Space, Breadcrumb, message, Tabs, Empty, Row, Col, Divider, Modal } from 'antd'
 import ReactMarkdown from 'react-markdown'
-import { ArrowLeftOutlined, PlayCircleOutlined, ReloadOutlined, SafetyOutlined, RobotOutlined, StopOutlined } from '@ant-design/icons'
+import { SafetyOutlined, RobotOutlined, StopOutlined } from '@ant-design/icons'
 import type { Task, ChatMessage, ExtractedInfo, AnalysisResult } from '../types'
 import { taskApi, extractApi, analysisApi, chatApi } from '../api'
 
@@ -65,7 +65,6 @@ function AnalysisResult() {
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [extractedInfo, setExtractedInfo] = useState<ExtractedInfo[]>([])
   const [analysisResults, setAnalysisResults] = useState<AnalysisResult[]>([])
-  const [loading, setLoading] = useState(false)
   const [extracting, setExtracting] = useState(false)
   const [analyzing, setAnalyzing] = useState(false)
   const [activeTab, setActiveTab] = useState('messages')

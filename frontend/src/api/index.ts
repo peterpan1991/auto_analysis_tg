@@ -1,5 +1,5 @@
 import axios from 'axios'
-import type { Task, ChatMessage, ExtractedInfo, AnalysisResult, ImportRequest } from '../types'
+import type { Task, ChatMessage, TaskContact, ExtractedInfo, AnalysisResult, ImportRequest } from '../types'
 
 const api = axios.create({
   baseURL: '/api/v1',
@@ -16,6 +16,7 @@ export const taskApi = {
 
 export const chatApi = {
   getMessages: (taskId: number) => api.get<ChatMessage[]>(`/tasks/${taskId}/messages`),
+  getContacts: (taskId: number) => api.get<TaskContact[]>(`/tasks/${taskId}/contacts`),
   importChat: (data: ImportRequest) => api.post<{ message_count: number }>('/chat/import', data),
   getImportStatus: (taskId: number) => api.get<{ status: string; message_count: number; logs: string[]; error: string | null }>(`/tasks/${taskId}/import-status`),
   getImportLogs: (taskId: number) => api.get<{ logs: string[] }>(`/tasks/${taskId}/import-logs`),
@@ -53,12 +54,24 @@ export interface VectorizeDetailStatus {
 export interface ChatAIRequest {
   task_id: number
   prompt: string
-  top_k?: number
+  contact_id?: number
+}
+
+export interface ChatSource {
+  source_id: number
+  chunk_id: string
+  contact_id: number
+  start_message_id: number
+  end_message_id: number
+  similarity: number
+  content: string
 }
 
 export interface ChatAIResponse {
   response: string
-  context_messages: number
+  context_count: number
+  expanded_queries: string[]
+  sources: ChatSource[]
 }
 
 export const vectorizeApi = {

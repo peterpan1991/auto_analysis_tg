@@ -13,6 +13,7 @@ from repository.contact_repository import (
     create_contact,
     update_contact,
     delete_contact,
+    get_contacts_by_task,
 )
 
 from repository.message_repository import (

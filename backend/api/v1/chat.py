@@ -8,6 +8,7 @@ import services.chat_service as chat_service
 import services.task_service as task_service
 from schemas.chat_schema import ImportRequest, ImportResponse
 from schemas.message_schema import MessageResponse
+from schemas.contact_schema import ContactResponse
 
 router = APIRouter()
 
@@ -46,3 +47,21 @@ def cancel_import(task_id: int):
 def get_messages(task_id: int, db: Session = Depends(get_db)):
     messages = chat_service.get_messages_by_task(db, task_id)
     return messages
+
+@router.get(
+    "/tasks/{task_id}/contacts",
+    response_model=List[ContactResponse],
+)
+def get_contacts(
+    task_id: int,
+    db: Session = Depends(get_db),
+):
+    task = task_service.get_task(db, task_id)
+
+    if not task:
+        raise HTTPException(
+            status_code=404,
+            detail="任务不存在",
+        )
+
+    return chat_service.get_contacts_by_task(db, task_id)

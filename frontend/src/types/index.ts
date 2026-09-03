@@ -17,6 +17,12 @@ export interface ChatMessage {
   message_type: 'text' | 'image' | 'file' | 'video' | 'audio' | 'other'
 }
 
+export interface TaskContact {
+  id: number
+  name: string
+  is_group: boolean
+}
+
 export interface ExtractedInfo {
   id: number
   task_id: number

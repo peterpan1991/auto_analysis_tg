@@ -25,6 +25,20 @@ def get_contact_ids_by_task(db: Session, task_id: int) -> List[int]:
     ).distinct().all()
     return [r[0] for r in results]
 
+
+def get_recent_messages(
+    db: Session,
+    task_id: int,
+    limit: int,
+    contact_id: Optional[int] = None,
+) -> List[Message]:
+    query = db.query(Message).filter(Message.task_id == task_id)
+
+    if contact_id is not None:
+        query = query.filter(Message.contact_id == contact_id)
+
+    return query.order_by(Message.timestamp.desc()).limit(limit).all()
+
 def get_messages_by_contact_ordered(db: Session, task_id: int, contact_id: int) -> List[Message]:
     return db.query(Message).filter(
         Message.task_id == task_id,

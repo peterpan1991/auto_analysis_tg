@@ -7,7 +7,7 @@ load_dotenv()
 
 def get_database_url():
     user = os.getenv('DATABASE_USER', 'root') or 'root'
-    password = os.getenv('DATABASE_PASSWORD', '') or ''
+    password = os.getenv('DATABASE_PASSWORD', '') or '123456'
     host = os.getenv('DATABASE_HOST', 'localhost') or 'localhost'
     port = os.getenv('DATABASE_PORT', '3306') or '3306'
     db_name = os.getenv('DATABASE_NAME', 'telegram_analysis') or 'telegram_analysis'
